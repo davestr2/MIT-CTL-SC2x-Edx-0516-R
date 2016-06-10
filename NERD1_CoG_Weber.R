@@ -82,6 +82,25 @@ p1 <- p1 + geom_point() +
                xend = cityData$X[2], yend = cityData$Y[2])
  
 p1
-plot.new()
-library(gridExtra)
-grid.table(cityData)
+
+cityData$X <- round(cityData$X,0)
+cityData$Y <- round(cityData$Y,0)
+
+cityData <- cityData[-c(4,5),]
+
+cityData <- cbind(cityData,WeberDists,WeberWgtDists,COGDists,COGWgtDists)
+cityData$WeberDists <- round(cityData$WeberDists,2)
+cityData$WeberWgtDists <- round(cityData$WeberWgtDists,0)
+cityData$COGDists <- round(cityData$COGDists,2)
+cityData$COGWgtDists <- round(cityData$COGWgtDists,0)
+
+cityData
+
+print(paste("Total weight-",totalWeght,
+            " Total Weber Wgt Dist-",sum(cityData$WeberWgtDists),
+            " Total COG Wgt Dist-",sum(cityData$COGWgtDists)))
+
+print(paste("Weber Coordinates", round(X_Y_Weber[1],0)," ",round(X_Y_Weber[2],0)))
+print(paste("CoG   Coordinates",round(COG_x,0), round(COG_y,0)))
+print(paste("Average Diantace Weber = ", round(sum(cityData$WeberWgtDists)/totalWeght,2)))
+print(paste("Average Diantace COG   = ", round(sum(cityData$COGWgtDists)/totalWeght,2)))
