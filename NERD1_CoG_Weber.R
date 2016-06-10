@@ -2,7 +2,16 @@
 
 # NERD1_CoG_Weber
 
-cities <- c('Boston', 'Providence','Springfield')
+
+cityData <- data.frame(id = c('BO','PR','SP'),
+                   cityName = c('Boston', 'Providence','Springfield'),
+                   wgt = c(425,320,220),
+                   X = c(100,86,20),
+                   Y = c(80,40,60))
+
+cityData$id <- as.character(cityData$id)
+cityData$cityName <- as.character(cityData$cityName)
+
 
 # Going to use the orloca package
 
@@ -10,51 +19,69 @@ cities <- c('Boston', 'Providence','Springfield')
 #install.packages("orloca")
 
 # load the orloca package
-library(orloca)
+if(require('orloca')){
+  print('orloca package loaded OK')
+}else{
+  stop('Please install the orloca package')
+}
 
-weightedLocations <- loca.p(x = c(100,86,20),
-                            y = c(80,40,60),
-                            w = c(425,320,220))
 
-# Calculate the Weber distance answer 
+# Create a loca.p object with the X-Y cordinates and the weights
 
-(X_Y_Weber <- zsummin(weightedLocations, max.iter = 500,
-        verbose = FALSE))
+weightedLocations <- loca.p(x = cityData$X,
+                            y = cityData$Y,
+                            w = cityData$wgt)
+                            
+# Use zummin in orloca package to calculate the Weber Coordinates
 
-# Calculate the Center of Gravity
+X_Y_Weber <- zsummin(weightedLocations, max.iter = 500,
+        verbose = FALSE)
 
+# Calculate the Center of Gravity X - Y Coordinates
+
+# Get the total weight
 totalWeght <- sum(weightedLocations@w)
 
-C_of_G_x <- c(crossprod(weightedLocations@w,weightedLocations@x))/totalWeght
-C_of_G_y <- c(crossprod(weightedLocations@w,weightedLocations@y))/totalWeght
+# Center Of Gravity X coordinate  
+COG_x <- c(crossprod(weightedLocations@w,weightedLocations@x))/totalWeght
 
-#print(paste0("The Weber co-ordinates are ",round(X_Y_Weber[1],2)," ",
-#      round(X_Y_Weber[2],2)))
-#print(paste0("The  COG  co-ordinates are ",round(C_of_G_x,2)," ",
-#             round(C_of_G_y,2)))
+# Center Of Gravity Y coordinate  
+COG_y <- c(crossprod(weightedLocations@w,weightedLocations@y))/totalWeght
 
-WeberDist <- sqrt((weightedLocations@x-X_Y_Weber[1])^2+
+# Calculate each City Weber Distance
+WeberDists <- sqrt((weightedLocations@x-X_Y_Weber[1])^2+
                           (weightedLocations@y-X_Y_Weber[2])^2)
-WeberWgtDist <- round(WeberDist*weightedLocations@w,0)
 
-COGDist <- sqrt((weightedLocations@x-C_of_G_x)^2+
-                          (weightedLocations@y-C_of_G_y)^2)
-COGWgtDist <- round(COGDist*weightedLocations@w,0)
+# Calculate each City Weber Weight Distance
+WeberWgtDists <- WeberDists*weightedLocations@w
 
-weightRow <- c(" ",totalWeght," "," ",
-               "Total Weight Dist",
-               sum(WeberWgtDist)," ",sum(COGWgtDist))
+# Calculate each City COG Distance
+COGDists <- sqrt((weightedLocations@x-COG_x)^2+
+                         (weightedLocations@y-COG_y)^2)
+# Calculate each City COG Weight Distance
+COGWgtDists <- COGDists*weightedLocations@w
 
-outMatrix <- cbind(cities,weightedLocations@w,
-             weightedLocations@x,weightedLocations@y,
-             round(WeberDist,2),WeberWgtDist,
-             round(COGDist,2),COGWgtDist
-                   )
-outMatrix <- rbind(outMatrix,weightRow)
-outMatrix
-colnames(outMatrix) <- c("Cities", "Wgt","X","Y",
-                         "Dist","Wgt Dist",
-                         "Dist","Wgt Dist")
-library(tables)
-tabular((Species +1) ~ (n=1) + Format(digits=2)*
-                (Sepal.Length + Sepal.Width)*(mean + sd), data=iris)
+library(ggplot2)
+library(ggrepel)
+        
+cityData <- rbind(cityData, data.frame(
+  id = 'CG', cityName ='Center of Gravity', wgt = 0,
+  X = COG_x , Y =COG_y))
+
+cityData <- rbind(cityData, data.frame(
+  id = 'WC', cityName ='Weber calculated Center', wgt = 0 ,
+  X = X_Y_Weber[1],Y = X_Y_Weber[2]))
+p1 <- ggplot(cityData, aes(x = X, y = Y))
+p1 <- p1 + geom_point() + 
+  geom_text_repel(aes(label=id), size=3, nudge_x = -4) +
+  geom_segment(x = cityData$X[1], y = cityData$Y[1],
+               xend = cityData$X[2], yend = cityData$Y[2]) +
+  geom_segment(x = cityData$X[1], y = cityData$Y[1],
+               xend = cityData$X[3], yend = cityData$Y[3]) +
+  geom_segment(x = cityData$X[3], y = cityData$Y[3],
+               xend = cityData$X[2], yend = cityData$Y[2])
+ 
+p1
+plot.new()
+library(gridExtra)
+grid.table(cityData)
